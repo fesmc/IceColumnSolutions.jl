@@ -1,0 +1,2 @@
+- Accuracy is important.
+- Clean API, easy to use.
