@@ -87,25 +87,41 @@ end
 # ---- public API -------------------------------------------------------------
 
 """
-    solve_stationary(par::IceColumnPar; nz=100, celsius=false) -> IceColumn
+    solve_stationary(par::IceColumnPar; nz=100, zeta=nothing, z=nothing, celsius=false) -> IceColumn
 
 Compute the equilibrium (stationary) temperature profile ϑ(ξ).
 
 Returns an `IceColumn` where `T` == `T_eq` (nz × 1 matrix, repeated once so the
 struct is always consistent). Time vector `t` contains a single value `Inf`.
+
+# Grid selection (mutually exclusive)
+- `nz`   : number of uniformly spaced ζ points (default 100)
+- `zeta` : custom normalised coordinate vector ζ ∈ [0,1]
+- `z`    : custom physical depth vector (m); converted via ζ = z / L
+
+Passing both `zeta` and `z`, or passing `nz` with a mismatched vector length,
+is an error.
 """
-function solve_stationary(par::IceColumnPar; nz::Int=100, celsius::Bool=false)
-    zeta     = _zeta_grid(nz)
-    theta_eq = _stationary_theta(zeta, par)
-    theta    = reshape(theta_eq, :, 1)   # nz × 1
-    _make_solution(zeta, theta_eq, theta, [Inf], par; celsius=celsius)
+function solve_stationary(par::IceColumnPar;
+                           nz::Int      = 0,
+                           zeta::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                           z::Union{Nothing, AbstractVector{<:Real}}    = nothing,
+                           celsius::Bool = false)
+    zeta_grid = _resolve_zeta_grid(nz, zeta, z, par.L)
+    theta_eq  = _stationary_theta(zeta_grid, par)
+    theta     = reshape(theta_eq, :, 1)   # nz × 1
+    _make_solution(zeta_grid, theta_eq, theta, [Inf], par; celsius=celsius)
 end
 
 """
-    solve(par::IceColumnPar; nz=100, celsius=false) -> IceColumn
+    solve(par::IceColumnPar; nz=100, zeta=nothing, z=nothing, celsius=false) -> IceColumn
 
 Compute the equilibrium (stationary) temperature profile. Equivalent to
-`solve_stationary(par; nz, celsius)`.
+`solve_stationary(par; nz, zeta, z, celsius)`.
 """
-solve(par::IceColumnPar; nz::Int=100, celsius::Bool=false) =
-    solve_stationary(par; nz=nz, celsius=celsius)
+solve(par::IceColumnPar;
+      nz::Int      = 0,
+      zeta::Union{Nothing, AbstractVector{<:Real}} = nothing,
+      z::Union{Nothing, AbstractVector{<:Real}}    = nothing,
+      celsius::Bool = false) =
+    solve_stationary(par; nz=nz, zeta=zeta, z=z, celsius=celsius)

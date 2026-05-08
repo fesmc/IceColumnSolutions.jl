@@ -64,6 +64,33 @@ end
 """Build a uniform ζ grid on [0,1] of length nz."""
 _zeta_grid(nz::Int) = range(0.0, 1.0, length=nz) |> collect
 
+"""
+Resolve the vertical grid from keyword arguments `nz`, `zeta`, and `z`.
+
+`nz == 0` is the sentinel for "not explicitly set"; when no custom grid is
+given it defaults to a uniform grid of 100 points. Passing both `zeta` and
+`z` is an error. Passing `nz > 0` alongside a custom grid whose length
+differs from `nz` is an error.
+"""
+function _resolve_zeta_grid(nz::Int,
+                             zeta::Union{Nothing, AbstractVector{<:Real}},
+                             z::Union{Nothing, AbstractVector{<:Real}},
+                             L::Real)
+    !isnothing(zeta) && !isnothing(z) &&
+        error("provide `zeta` or `z`, not both")
+    if !isnothing(zeta)
+        nz > 0 && nz != length(zeta) &&
+            error("`nz=$nz` conflicts with length(zeta)=$(length(zeta))")
+        return collect(Float64, zeta)
+    end
+    if !isnothing(z)
+        nz > 0 && nz != length(z) &&
+            error("`nz=$nz` conflicts with length(z)=$(length(z))")
+        return collect(Float64, z) ./ L
+    end
+    _zeta_grid(nz == 0 ? 100 : nz)
+end
+
 """Assemble an IceColumn from dimensionless θ arrays and par."""
 function _make_solution(zeta::Vector{Float64},
                         theta_eq::Vector{Float64},

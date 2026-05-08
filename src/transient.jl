@@ -168,7 +168,7 @@ end
 # ---- main solver ------------------------------------------------------------
 
 """
-    solve(par, ts; init, n_modes=50, nz=100, celsius=false) -> IceColumn
+    solve(par, ts; init, n_modes=50, nz=100, zeta=nothing, z=nothing, celsius=false) -> IceColumn
 
 Compute the transient temperature evolution θ(ξ,τ) at times `ts` (years).
 
@@ -178,17 +178,27 @@ Compute the transient temperature evolution θ(ξ,τ) at times `ts` (years).
 - `init`    : initial condition function `θ₀(ξ, par)` (dimensionless);
               use `uniform(T_val)` or `stationary_init(par)`.
 - `n_modes` : number of series terms (default 50)
-- `nz`      : number of vertical grid points (default 100)
 - `celsius` : if true, return T and T_eq in °C (default false)
+
+# Grid selection (mutually exclusive)
+- `nz`   : number of uniformly spaced ζ points (default 100)
+- `zeta` : custom normalised coordinate vector ζ ∈ [0,1]
+- `z`    : custom physical depth vector (m); converted via ζ = z / L
+
+Passing both `zeta` and `z`, or passing `nz` with a mismatched vector length,
+is an error.
 """
 function solve(par::IceColumnPar, ts::AbstractVector{<:Real};
                init,
                n_modes::Int = 50,
-               nz::Int      = 100,
+               nz::Int      = 0,
+               zeta::Union{Nothing, AbstractVector{<:Real}} = nothing,
+               z::Union{Nothing, AbstractVector{<:Real}}    = nothing,
                celsius::Bool = false)
 
-    zeta     = _zeta_grid(nz)
-    theta_eq = _stationary_theta(zeta, par)
+    zeta_grid = _resolve_zeta_grid(nz, zeta, z, par.L)
+    nz_actual = length(zeta_grid)
+    theta_eq  = _stationary_theta(zeta_grid, par)
 
     # Non-dimensional times τ = κ·t / L²
     kappa_yr = par.kappa * YR_TO_S
@@ -204,14 +214,14 @@ function solve(par::IceColumnPar, ts::AbstractVector{<:Real};
     An = [_series_coefficient(params_eig[n], par, delta0) for n in 1:n_modes]
 
     # Precompute eigenfunction matrix Φ[i,n] = Φₙ(ξᵢ)
-    Phi = Matrix{Float64}(undef, nz, n_modes)
-    for n in 1:n_modes, i in eachindex(zeta)
-        Phi[i, n] = _eigenfunction(zeta[i], params_eig[n], par)
+    Phi = Matrix{Float64}(undef, nz_actual, n_modes)
+    for n in 1:n_modes, i in eachindex(zeta_grid)
+        Phi[i, n] = _eigenfunction(zeta_grid[i], params_eig[n], par)
     end
 
     # Evaluate θ(ξ, τ) = ϑ(ξ) + Phi * (An .* exp.(λ·τ))
     nt    = length(ts)
-    theta = Matrix{Float64}(undef, nz, nt)
+    theta = Matrix{Float64}(undef, nz_actual, nt)
     An_v  = collect(Float64, An)
 
     for j in eachindex(tau_vec)
@@ -220,5 +230,5 @@ function solve(par::IceColumnPar, ts::AbstractVector{<:Real};
     end
 
     t_vec = collect(Float64, ts)
-    _make_solution(zeta, theta_eq, theta, t_vec, par; celsius=celsius)
+    _make_solution(zeta_grid, theta_eq, theta, t_vec, par; celsius=celsius)
 end
