@@ -33,17 +33,35 @@ par = IceColumnPar(1000.0,   # L     — ice thickness (m)
                    w0 = -0.3)  # surface velocity (m yr⁻¹); negative = downward
 
 # Equilibrium (stationary) temperature profile
-sol_eq = solve(par; celsius=true)
+sol_eq = solve(par; nz=100, celsius=true)
 
 # Transient evolution from a cold initial state
 sol = solve(par, [0.0, 1_000.0, 10_000.0, 50_000.0];
             init    = uniform(220.0),   # uniform 220 K start
             n_modes = 20,
+            nz      = 100,
             celsius = true)
 
 # sol.T       — temperature in °C, size nz × nt
 # sol.T_eq    — equilibrium temperature in °C, length nz
 # sol.z       — depth coordinate (m), 0 at base, L at surface
+```
+
+Custom depth grids are also supported. Pass `zeta` (normalised ζ ∈ [0,1]) or
+`z` (physical depth in metres) instead of `nz`:
+
+```julia
+# Quadratic spacing — denser near the base (z = 0)
+z_custom = par.L .* range(0, 1, length=60).^2
+sol_eq_fine = solve(par; z=z_custom, celsius=true)
+
+# Or equivalently, using normalised coordinates ζ ∈ [0,1]
+zeta_custom = range(0, 1, length=60).^2 |> collect
+sol_trans = solve(par, [0.0, 10_000.0, 50_000.0];
+                  init    = uniform(220.0),
+                  n_modes = 20,
+                  zeta    = zeta_custom,
+                  celsius = true)
 ```
 
 ## Contents
