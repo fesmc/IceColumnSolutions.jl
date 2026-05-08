@@ -100,3 +100,12 @@ function solve_stationary(par::IceColumnPar; nz::Int=100, celsius::Bool=false)
     theta    = reshape(theta_eq, :, 1)   # nz × 1
     _make_solution(zeta, theta_eq, theta, [Inf], par; celsius=celsius)
 end
+
+"""
+    solve(par::IceColumnPar; nz=100, celsius=false) -> IceColumn
+
+Compute the equilibrium (stationary) temperature profile. Equivalent to
+`solve_stationary(par; nz, celsius)`.
+"""
+solve(par::IceColumnPar; nz::Int=100, celsius::Bool=false) =
+    solve_stationary(par; nz=nz, celsius=celsius)
