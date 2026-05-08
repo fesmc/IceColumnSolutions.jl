@@ -29,7 +29,7 @@ using IceColumnSolutions, CairoMakie
 par = benchmark(:exp1)
 
 # --- stationary solution ---
-sol_eq = solve_stationary(par; nz=100)
+sol_eq = solve(par; nz=100)
 
 # --- transient from uniform initial temperature ---
 T0  = 230.0    # K  (slightly below T_air = 250 K)

@@ -30,7 +30,7 @@ using IceColumnSolutions, CairoMakie
 
 par = benchmark(:exp3)
 
-sol_eq = solve_stationary(par; nz=100)
+sol_eq = solve(par; nz=100)
 
 # Find the depth of the interior temperature maximum
 ξ_max = sol_eq.zeta[argmax(sol_eq.theta_eq)]
@@ -62,7 +62,7 @@ axislegend(ax1; position=:lt, labelsize=11)
 
 # also show Exp 1 equilibrium for comparison
 par1 = benchmark(:exp1)
-sol1 = solve_stationary(par1; nz=100)
+sol1 = solve(par1; nz=100)
 lines!(ax1, sol1.theta_eq, sol1.zeta;
        color=:gray70, linestyle=:dot, linewidth=1.5)
 text!(ax1, sol1.theta_eq[50], sol1.zeta[50] + 0.05; text="Exp 1 (Br=0)",
