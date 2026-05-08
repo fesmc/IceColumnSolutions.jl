@@ -33,7 +33,7 @@ par = IceColumnPar(1000.0,   # L     — ice thickness (m)
                    w0 = -0.3)  # surface velocity (m yr⁻¹); negative = downward
 
 # Equilibrium (stationary) temperature profile
-sol_eq = solve_stationary(par; celsius=true)
+sol_eq = solve(par; celsius=true)
 
 # Transient evolution from a cold initial state
 sol = solve(par, [0.0, 1_000.0, 10_000.0, 50_000.0];

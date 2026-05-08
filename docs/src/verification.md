@@ -36,7 +36,7 @@ T0   = 230.0                                           # initial temperature (K)
 ts   = [500.0, 5_000.0, 20_000.0, 100_000.0]          # output times (yr)
 nz   = 100
 
-sol_eq = solve_stationary(par; nz=nz)
+sol_eq = solve(par; nz=nz)
 sol    = solve(par, ts; init=uniform(T0), n_modes=12, nz=nz)
 
 # ── explicit Euler FD solver ──────────────────────────────────────────────────

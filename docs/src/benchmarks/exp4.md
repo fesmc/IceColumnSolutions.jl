@@ -30,7 +30,7 @@ using IceColumnSolutions, CairoMakie
 
 par = benchmark(:exp4)
 
-sol_eq = solve_stationary(par; nz=100)
+sol_eq = solve(par; nz=100)
 
 T0  = 230.0
 ts  = [2_000.0, 20_000.0, 100_000.0, 300_000.0]

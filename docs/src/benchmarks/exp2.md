@@ -28,7 +28,7 @@ using IceColumnSolutions, CairoMakie
 
 par = benchmark(:exp2)
 
-sol_eq = solve_stationary(par; nz=100)
+sol_eq = solve(par; nz=100)
 
 T0  = 230.0
 ts  = [2_000.0, 20_000.0, 80_000.0, 250_000.0]
@@ -48,7 +48,7 @@ for (j, t) in enumerate(ts)
 end
 # also show Exp 1 equilibrium for comparison
 par1   = benchmark(:exp1)
-sol1eq = solve_stationary(par1; nz=100)
+sol1eq = solve(par1; nz=100)
 lines!(ax1, sol1eq.theta_eq, sol1eq.zeta;
        color=:gray70, linestyle=:dot, linewidth=1.5, label="Exp 1 eq. (Pe=0)")
 lines!(ax1, sol_eq.theta_eq, sol_eq.zeta;
