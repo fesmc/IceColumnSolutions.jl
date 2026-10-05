@@ -1,21 +1,22 @@
 """
 Stationary (equilibrium) solution — Appendix B, Moreno-Parada et al. (2024).
 
-The stationary temperature profile ϑ(ξ) satisfies (Eq. B1 in non-dimensional form):
-    ϑ_ξξ - Pe·ξ·ϑ_ξ = Ω,   ξ ∈ [0,1]
+The stationary temperature profile ϑ(ξ) satisfies (Eq. B1 in non-dimensional form,
+with Pe > 0 for downward flow, see `IceColumnPar`):
+    ϑ_ξξ + Pe·ξ·ϑ_ξ = -Ω,  ξ ∈ [0,1]
     ϑ_ξ = γ,               ξ = 0
     β'·ϑ_ξ + ϑ = 1,        ξ = 1
 
 where Ω = Br + Λ is the total dimensionless heat source.
 
 Solution (Eq. B2):
-    ϑ(ξ) = Ω·(ξ²/2)·₂F₂(1,1; 3/2, 2; -a²ξ²) + A·erf(aξ) + B
+    ϑ(ξ) = -Ω·(ξ²/2)·₂F₂(1,1; 3/2, 2; -a²ξ²) + A·erf(aξ) + B
 
 with a = sqrt(Pe/2), A = -γ·sqrt(π/(4a)), B from the top BC.
 
 Special case Pe=0: purely diffusive + source gives a quadratic polynomial.
 
-All computations use complex arithmetic where Pe < 0 (downward ice flow) makes
+All computations use complex arithmetic where Pe < 0 (upward ice flow) makes
 a imaginary; the physical result is real and recovered via `real()`.
 """
 
@@ -44,17 +45,17 @@ function _stationary_theta(zeta::AbstractVector{Float64}, par::IceColumnPar)
         return _stationary_theta_Pe0(zeta, Ω, γ, β)
     end
 
-    a  = sqrt(complex(Pe / 2.0))   # imaginary for Pe < 0 (downward flow)
+    a  = sqrt(complex(Pe / 2.0))   # imaginary for Pe < 0 (upward flow)
     a2 = a^2                        # = Pe/2
 
     # Constants A and B from Appendix B (Eq. B2)
     # d/dξ[erf(aξ)]|_{ξ=0} = 2a/√π, so BC ϑ_ξ(0)=γ gives A = γ√π/(2a)
     A = γ * sqrt(complex(π)) / (2 * a)
 
-    # ϑ(1) contribution from ₂F₂ term:  Ω/2 · ₂F₂(1,1;3/2,2; -a²)
+    # ϑ(1) contribution from ₂F₂ term:  -Ω/2 · ₂F₂(1,1;3/2,2; -a²)
     F1_at1 = _2F2_1122(-a2)
 
-    # ϑ_ξ(1) = Ω·[₂F₂(1,1;3/2,2;-a²) - a²/3·₂F₂(2,2;5/2,3;-a²)] + A·(2a/√π)·e^(-a²)
+    # ϑ_ξ(1) = -Ω·[₂F₂(1,1;3/2,2;-a²) - a²/3·₂F₂(2,2;5/2,3;-a²)] + A·(2a/√π)·e^(-a²)
     F2_at1 = _2F2_2253(-a2)
     dF_at1 = F1_at1 - (a2 / 3.0) * F2_at1
 
@@ -63,14 +64,14 @@ function _stationary_theta(zeta::AbstractVector{Float64}, par::IceColumnPar)
 
     B = (1.0
          - A * (2a * exp_a2 / sqrt(π) * β + erf_a)
-         - Ω * ((β + 0.5) * F1_at1 - β * a2 / 3.0 * F2_at1))
+         + Ω * ((β + 0.5) * F1_at1 - β * a2 / 3.0 * F2_at1))
 
     # Evaluate ϑ at each ζ
     θ = similar(zeta, ComplexF64)
     for i in eachindex(zeta)
         ξ  = zeta[i]
         ζi = a2 * ξ^2      # = Pe/2 · ξ²
-        θ[i] = Ω * (ξ^2 / 2) * _2F2_1122(-ζi) + A * erf(a * ξ) + B
+        θ[i] = -Ω * (ξ^2 / 2) * _2F2_1122(-ζi) + A * erf(a * ξ) + B
     end
 
     real.(θ)

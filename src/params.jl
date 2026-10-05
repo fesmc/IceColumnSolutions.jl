@@ -24,7 +24,7 @@ Construct with physical parameters (primary) or dimensionless parameters.
 - `p`       : velocity exponent for power-law profile w(z)=w0*(z/L)^p; 1 = linear
 
 # Dimensionless fields (Table 1, Moreno-Parada et al. 2024)
-- `Pe`         : Péclet number  = w0*L / (kappa*YR_TO_S)
+- `Pe`         : Péclet number  = -w0*L / (kappa*YR_TO_S); Pe > 0 for downward flow (accumulation)
 - `Br`         : Brinkman number = L²*S / (k*T_air)
 - `gamma`      : basal heat parameter = -(G+Q)*L / (k*T_air)
 - `beta_prime` : dimensionless surface insulation = beta/L
@@ -72,7 +72,7 @@ Construct from **physical** parameters. Dimensionless fields are computed automa
 function IceColumnPar(L, T_air, kappa, k, beta, G;
                       w0=0.0, Q=0.0, S=0.0, H=0.0, p=1.0)
     kappa_yr = kappa * YR_TO_S          # m² yr⁻¹
-    Pe         = w0 * L / kappa_yr
+    Pe         = -w0 * L / kappa_yr      # Pe > 0 for downward flow (w0 < 0)
     Br         = L^2 * S / (k * T_air)
     gamma      = -(G + Q) * L / (k * T_air)
     beta_prime = beta / L
@@ -93,7 +93,7 @@ needed to recover physical fields.
 - `L`, `T_air`, `kappa`, `k` : dimensional anchors (same units as above)
 - `beta_prime` : dimensionless surface insulation β̃ = β/L
 - `gamma`      : dimensionless basal heat parameter γ
-- `Pe`         : Péclet number
+- `Pe`         : Péclet number; Pe > 0 for downward flow (accumulation)
 - `Br`         : Brinkman number; default 0
 - `Lambda`     : dimensionless horizontal advection; default 0
 - `p`          : velocity exponent; default 1
@@ -109,7 +109,7 @@ function IceColumnPar(L, T_air, kappa, k, beta_prime, gamma, Pe;
     # recover combined physical quantities
     G          = -gamma * k * T_air / L   # Q absorbed into G (Q=0 by convention)
     Q          = 0.0
-    w0         = Pe * kappa_yr / L
+    w0         = -Pe * kappa_yr / L
     S          = Br * k * T_air / L^2
     H          = Lambda * kappa_yr * T_air / L^2
     IceColumnPar(Float64(L), Float64(T_air), Float64(kappa), Float64(k),

@@ -6,7 +6,7 @@
 
 Experiment 4 combines three effects not present simultaneously in Exps 1–3:
 
-- **Pe = 5** — upward advection (ablation zone), as in Exp 2.
+- **Pe = 5** — downward advection (accumulation zone), as in Exp 2.
 - **β′ = 1** — Robin surface BC with ``\beta = L = 1000`` m, modelling partial
   thermal insulation at the surface (e.g., a thin snow/firn layer or a
   prescribed surface-flux condition instead of a fixed temperature).
@@ -91,7 +91,9 @@ fig
   pure-Dirichlet value of 1 (compare the star marker to θ = 1).
 - Horizontal advection (Λ = 3) raises the entire profile relative to Exp 2,
   just as strain heating does in Exp 3.
-- The right panel compares all four experiments.  Exp 4 converges even more
-  slowly than Exp 2 because the Robin BC changes the eigenvalue spectrum.
+- The right panel compares all four experiments.  Exp 4 converges about twice
+  as slowly as Exp 2 (``|\lambda_1| \approx 2.75`` against 5.74), because the
+  Robin BC changes the eigenvalue spectrum, consistent with the dependence of the
+  decay time scales on Pe and β′ found by Moreno-Parada et al. (2024).
 - `n_modes = 5` is used for Exps 2 and 4 (Pe > 0) to keep build time
   reasonable; the first few modes dominate for all shown times.

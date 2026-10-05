@@ -33,10 +33,14 @@ Introducing ``\theta = T / T_\text{air}``, ``\xi = z/L``,
 ```math
 \frac{\partial\theta}{\partial\tau}
 = \frac{\partial^2\theta}{\partial\xi^2}
-- \mathrm{Pe}\,\xi\,\frac{\partial\theta}{\partial\xi}
++ \mathrm{Pe}\,\xi\,\frac{\partial\theta}{\partial\xi}
 + \Omega ,
 \qquad \xi\in[0,1]
 ```
+
+for a linear velocity profile (``p = 1``), with ``\mathrm{Pe} = -w_0 L/\kappa``,
+so that ``\mathrm{Pe} > 0`` for downward flow (accumulation) and the
+non-dimensional velocity is ``-\mathrm{Pe}\,\xi``.
 
 with boundary conditions
 
@@ -51,7 +55,7 @@ The five dimensionless parameters are (Table 1 of Moreno-Parada et al. 2024):
 
 | Symbol | Name | Definition | Typical range |
 |--------|------|-----------|--------------|
-| ``\mathrm{Pe}`` | Péclet number | ``w_0 L / (\kappa \cdot \text{yr})`` | ``[-10,\; 0]`` accumulation; ``[0,\; 10]`` ablation |
+| ``\mathrm{Pe}`` | Péclet number | ``-w_0 L / (\kappa \cdot \text{yr})`` | ``[0,\; 30]`` accumulation (downward); ``< 0`` upward flow |
 | ``\mathrm{Br}`` | Brinkman number | ``L^2 S / (k T_\text{air})`` | ``[0,\; 10]`` |
 | ``\gamma`` | Basal heat parameter | ``-(G+Q)L / (k T_\text{air})`` | ``[-1,\; -0.05]`` realistic; ``[0, 5]`` benchmark |
 | ``\beta'`` | Surface insulation | ``\beta / L`` | ``0`` (Dirichlet) to ``\sim 1`` |
@@ -74,7 +78,7 @@ transient part ``\mu(\xi,\tau)`` that carries the initial condition:
 ``\vartheta(\xi)`` satisfies the ODE (Appendix B, Eq. B1)
 
 ```math
-\vartheta_{\xi\xi} - \mathrm{Pe}\,\xi\,\vartheta_\xi = \Omega ,
+\vartheta_{\xi\xi} + \mathrm{Pe}\,\xi\,\vartheta_\xi = -\Omega ,
 \qquad \vartheta_\xi(0) = \gamma ,\quad
 \beta'\,\vartheta_\xi(1) + \vartheta(1) = 1 .
 ```
@@ -83,16 +87,16 @@ For ``\mathrm{Pe} \ne 0`` the solution is (Eq. B2, corrected sign for ``A``):
 
 ```math
 \vartheta(\xi)
-= \frac{\Omega\,\xi^2}{2}\;{}_2F_2\!\left(1,1;\tfrac{3}{2},2;\,-a^2\xi^2\right)
+= -\frac{\Omega\,\xi^2}{2}\;{}_2F_2\!\left(1,1;\tfrac{3}{2},2;\,-a^2\xi^2\right)
 + A\,\mathrm{erf}(a\xi) + B ,
 ```
 
-where ``a = \sqrt{\mathrm{Pe}/2}`` (imaginary for ``\mathrm{Pe} < 0``),
+where ``a = \sqrt{\mathrm{Pe}/2}`` (imaginary for ``\mathrm{Pe} < 0``, upward flow),
 
 ```math
 A = \frac{\gamma\sqrt{\pi}}{2a}, \qquad
 B = 1 - A\!\left(\frac{2a\,e^{-a^2}}{\sqrt{\pi}}\,\beta' + \mathrm{erf}(a)\right)
-    - \Omega\!\left[\!\left(\beta'+\tfrac{1}{2}\right)F_1 - \tfrac{\beta' a^2}{3}F_2\right],
+    + \Omega\!\left[\!\left(\beta'+\tfrac{1}{2}\right)F_1 - \tfrac{\beta' a^2}{3}F_2\right],
 ```
 
 with ``F_1 = {}_2F_2(1,1;\tfrac{3}{2},2;-a^2)`` and
@@ -114,12 +118,12 @@ C = 1 + \left(\beta'+\tfrac{1}{2}\right)\Omega - (\beta'+1)\gamma .
 ```math
 \mu(\xi,\tau)
 = \sum_{n=1}^{\infty}
-  A_n\;M\!\left(\alpha_n;\,\tfrac{1}{2};\,\frac{\mathrm{Pe}\,\xi^2}{2}\right)
+  A_n\;M\!\left(\alpha_n;\,\tfrac{1}{2};\,-\frac{\mathrm{Pe}\,\xi^2}{2}\right)
   \exp(\lambda_n\,\tau) ,
 ```
 
 where ``M(a,b,z)`` is the Kummer confluent hypergeometric function
-``{}_1F_1(a;b;z)``, and ``\lambda_n = 2\,\mathrm{Pe}\,\alpha_n < 0``.
+``{}_1F_1(a;b;z)``, and ``\lambda_n = -2\,\mathrm{Pe}\,\alpha_n < 0``.
 
 **Special case ``\mathrm{Pe} = 0``**: eigenfunctions are ``\cos(k_n\xi)``
 with ``\lambda_n = -k_n^2``, where ``k_n`` satisfies
@@ -131,13 +135,12 @@ with ``\lambda_n = -k_n^2``, where ``k_n`` satisfies
 The parameters ``\alpha_n`` satisfy (Eq. A8):
 
 ```math
-\beta'\,\mathrm{Pe}\,2\alpha_n\,M\!\left(\alpha_n+1;\,\tfrac{3}{2};\,\frac{\mathrm{Pe}}{2}\right)
-+ M\!\left(\alpha_n;\,\tfrac{1}{2};\,\frac{\mathrm{Pe}}{2}\right) = 0 .
+-\beta'\,\mathrm{Pe}\,2\alpha_n\,M\!\left(\alpha_n+1;\,\tfrac{3}{2};\,-\frac{\mathrm{Pe}}{2}\right)
++ M\!\left(\alpha_n;\,\tfrac{1}{2};\,-\frac{\mathrm{Pe}}{2}\right) = 0 .
 ```
 
 For decay (``\lambda_n < 0``): ``\alpha_n`` and ``\mathrm{Pe}`` have
-**opposite signs** — for ``\mathrm{Pe} > 0`` the eigenvalues are negative,
-for ``\mathrm{Pe} < 0`` they are positive.
+the **same sign**.
 
 ### Series coefficients
 
@@ -145,7 +148,7 @@ for ``\mathrm{Pe} < 0`` they are positive.
 A_n = \frac{\displaystyle\int_0^1
       \bigl[\theta_0(\xi)-\vartheta(\xi)\bigr]\,\varrho(\xi)\,\Phi_n(\xi)\,d\xi}
 {\displaystyle\int_0^1 \Phi_n(\xi)^2\,\varrho(\xi)\,d\xi} ,
-\qquad \varrho(\xi) = e^{-\mathrm{Pe}\,\xi^2/2} ,
+\qquad \varrho(\xi) = e^{\mathrm{Pe}\,\xi^2/2} ,
 ```
 
 computed numerically using adaptive Gauss–Kronrod quadrature.
@@ -163,9 +166,18 @@ The correct formula derived from the base BC ``\vartheta_\xi(0)=\gamma`` is
 ``A = \gamma\sqrt{\pi}/(2a)``.
 The published formula has both the wrong sign and the wrong power of ``a``.
 
-**Eq. A7 — decay rate ``\lambda_n``:**
-The paper states ``\lambda_n = -2\,\mathrm{Pe}\,\alpha_n``.
-The correct formula from the Kummer ODE
-(``X''-\mathrm{Pe}\,\xi\,X' = 2\,\mathrm{Pe}\,\alpha\,X``) is
-``\lambda_n = 2\,\mathrm{Pe}\,\alpha_n``.
-With the paper's sign the modes for ``\mathrm{Pe}<0`` would grow rather than decay.
+**Eq. 7 — sign of the advection term:**
+Eq. 7 writes ``\theta_\tau = \theta_{\xi\xi} - \mathrm{Pe}\,\xi\,\theta_\xi``
+with ``\mathrm{Pe} = w_0 L/\kappa`` and ``w_0 < 0`` for downward flow, so that
+``\mathrm{Pe} < 0`` would describe accumulation. The stationary solution (Eq. B2),
+the decay rates ``\lambda_n = -2\,\mathrm{Pe}\,\alpha_n`` (Eq. A7) and the
+experiments of the paper all use ``\mathrm{Pe} > 0`` for downward flow, i.e., the
+equation ``\theta_\tau = \theta_{\xi\xi} + \mathrm{Pe}\,\xi\,\theta_\xi``.
+The source term enters the stationary equation as
+``\vartheta_{\xi\xi} + \mathrm{Pe}\,\xi\,\vartheta_\xi = -\Omega``, so the
+particular part of Eq. B2 is ``-\Omega\,\xi^2/2\;{}_2F_2(\dots)``, consistent
+with the ``\mathrm{Pe} = 0`` limit ``-\Omega\,\xi^2/2``.
+This package follows the latter convention throughout, with
+``\mathrm{Pe} = -w_0 L/\kappa``. (Versions up to 0.1.0 used Eq. 7 for the
+transient solution and Eq. B2 for the stationary solution, so the transient
+solution described the opposite flow direction.)

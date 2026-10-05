@@ -1,22 +1,26 @@
 """
 Transient solution — Appendix A, Moreno-Parada et al. (2024).
 
+Sign convention: Pe > 0 for downward ice flow (accumulation), Pe < 0 for
+upward flow (see `IceColumnPar`). The non-dimensional vertical velocity is
+w = −Pe·ξ.
+
 The transient perturbation μ(ξ,τ) = θ(ξ,τ) - ϑ(ξ) satisfies:
-    μ_τ = μ_ξξ - Pe·ξ·μ_ξ,   ξ ∈ [0,1], τ > 0
+    μ_τ = μ_ξξ + Pe·ξ·μ_ξ,   ξ ∈ [0,1], τ > 0
     μ_ξ = 0,                   ξ = 0
     β'·μ_ξ + μ = 0,            ξ = 1
     μ(ξ,0) = θ₀(ξ) - ϑ(ξ)
 
 Pe ≠ 0 solution (Eq. A7):
-    μ(ξ,τ) = Σ_n  Aₙ · M(αₙ; 1/2; Pe·ξ²/2) · exp(λₙ·τ)
+    μ(ξ,τ) = Σ_n  Aₙ · M(αₙ; 1/2; -Pe·ξ²/2) · exp(λₙ·τ)
 
-where M = Kummer ₁F₁, λₙ = 2·Pe·αₙ < 0 (decay).
+where M = Kummer ₁F₁ and λₙ = -2·Pe·αₙ < 0 (decay). With s = -Pe·ξ²/2, the
+Kummer equation gives X'' + Pe·ξ·X' = -2Pe·α·X.
 
-Eigenvalues αₙ from BC at ξ=1 (Eq. A8, corrected sign):
-    β'·Pe·2αₙ·M(αₙ+1, 3/2, Pe/2) + M(αₙ, 1/2, Pe/2) = 0
+Eigenvalues αₙ from the BC at ξ=1 (Eq. A8), using dM(a;b;s)/ds = (a/b)·M(a+1;b+1;s):
+    -β'·Pe·2αₙ·M(αₙ+1, 3/2, -Pe/2) + M(αₙ, 1/2, -Pe/2) = 0
 
-The Kummer ODE gives X'' - Pe·ξ·X' = 2Pe·α·X, so λₙ = 2Pe·αₙ.
-For decay (λₙ < 0):  αₙ·Pe < 0  →  αₙ < 0 for Pe > 0, αₙ > 0 for Pe < 0.
+For decay (λₙ < 0):  αₙ·Pe > 0  →  αₙ > 0 for Pe > 0, αₙ < 0 for Pe < 0.
 
 Pe = 0 solution (pure diffusion):
     μ(ξ,τ) = Σ_n  Aₙ · cos(kₙ·ξ) · exp(-kₙ²·τ)
@@ -56,8 +60,8 @@ Returns zero when α is a valid eigenvalue parameter.
 function _eigen_residual(α, par::IceColumnPar)
     Pe = par.Pe
     β  = par.beta_prime
-    z  = complex(Pe / 2)
-    real(β * Pe * 2α * Kummer(α + 1, 1.5, z) + Kummer(α, 0.5, z))
+    z  = complex(-Pe / 2)
+    real(-β * Pe * 2α * Kummer(α + 1, 1.5, z) + Kummer(α, 0.5, z))
 end
 
 """Pe=0 eigenvalue equation residual: -β'·k·sin(k) + cos(k) = 0."""
@@ -83,9 +87,9 @@ end
 """
 Find the first `n` eigenvalue parameters αₙ for Pe ≠ 0.
 
-Decay requires λₙ = 2Pe·αₙ < 0:
-  Pe > 0  →  αₙ < 0  (search negative range)
-  Pe < 0  →  αₙ > 0  (search positive range)
+Decay requires λₙ = -2Pe·αₙ < 0:
+  Pe > 0  →  αₙ > 0  (search positive range)
+  Pe < 0  →  αₙ < 0  (search negative range)
 
 The scan range is set from physical estimates: eigenvalues σₙ ≈ -(nπ)²
 at large n, so |αₙ| ≈ n²π²/(2|Pe|). A scan grid of ~50·n points
@@ -96,11 +100,11 @@ function _find_alpha_values(par::IceColumnPar, n::Int)
     scan_max = max(50.0, 1.5 * n^2 * π^2 / (2 * abs(Pe)))
     n_grid   = max(1000, 50 * n)
 
-    # αₙ has opposite sign to Pe for decay
+    # αₙ has the sign of Pe for decay
     if Pe > 0
-        grid = range(-scan_max, -1e-6, length=n_grid)
-    else
         grid = range(1e-6, scan_max, length=n_grid)
+    else
+        grid = range(-scan_max, -1e-6, length=n_grid)
     end
 
     alphas = find_zeros(α -> _eigen_residual(α, par), grid)
@@ -116,7 +120,7 @@ end
 
 Return the first `n` eigenvalue parameters and decay rates λₙ < 0.
 
-For Pe ≠ 0: `alphas_or_ks[n] = αₙ` (Kummer parameter), `lambdas[n] = 2·Pe·αₙ < 0`.
+For Pe ≠ 0: `alphas_or_ks[n] = αₙ` (Kummer parameter), `lambdas[n] = -2·Pe·αₙ < 0`.
 For Pe = 0: `alphas_or_ks[n] = kₙ` (wavenumber), `lambdas[n] = -kₙ²`.
 """
 function eigenvalues(par::IceColumnPar, n::Int)
@@ -126,7 +130,7 @@ function eigenvalues(par::IceColumnPar, n::Int)
         return ks, lambdas
     end
     alphas  = _find_alpha_values(par, n)
-    lambdas = [2.0 * par.Pe * α for α in alphas]   # λₙ = 2Pe·αₙ < 0
+    lambdas = [-2.0 * par.Pe * α for α in alphas]   # λₙ = -2Pe·αₙ < 0
     alphas, lambdas
 end
 
@@ -134,18 +138,18 @@ end
 
 """
 Eigenfunction at ξ given the stored eigenvalue parameter α_or_k.
-  Pe ≠ 0: M(α_or_k, 1/2, Pe·ξ²/2)
+  Pe ≠ 0: M(α_or_k, 1/2, -Pe·ξ²/2)
   Pe = 0: cos(α_or_k · ξ)
 """
 function _eigenfunction(ξ::Real, α_or_k::Real, par::IceColumnPar)
     if abs(par.Pe) < 1e-12
         return cos(α_or_k * ξ)
     end
-    real(Kummer(complex(α_or_k), 0.5, complex(par.Pe * ξ^2 / 2)))
+    real(Kummer(complex(α_or_k), 0.5, complex(-par.Pe * ξ^2 / 2)))
 end
 
-"""Weight function ϱ(ξ) = exp(-Pe·ξ²/2)."""
-_weight(ξ::Real, Pe::Real) = exp(-Pe * ξ^2 / 2)
+"""Sturm–Liouville weight ϱ(ξ) = exp(Pe·ξ²/2) of the operator μ_ξξ + Pe·ξ·μ_ξ."""
+_weight(ξ::Real, Pe::Real) = exp(Pe * ξ^2 / 2)
 
 """
 Compute series coefficient Aₙ (Eq. A9) by weighted inner product.

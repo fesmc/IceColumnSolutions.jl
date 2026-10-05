@@ -19,7 +19,7 @@ individual effects.
 | Experiment | Pe | Br | ``\gamma`` | ``\beta'`` | ``\Lambda`` | Key physics |
 |------------|----|----|------------|------------|-------------|-------------|
 | [Exp 1](@ref "Exp 1 — Pure diffusion") | 0  | 0 | 2 | 0 | 0 | Pure diffusion, linear equilibrium |
-| [Exp 2](@ref "Exp 2 — Advection")      | 5  | 0 | 2 | 0 | 0 | Upward advection (ablation zone) |
+| [Exp 2](@ref "Exp 2 — Advection")      | 5  | 0 | 2 | 0 | 0 | Downward advection (accumulation zone) |
 | [Exp 3](@ref "Exp 3 — Strain heating") | 0  | 6 | 2 | 0 | 0 | Strong strain heating |
 | [Exp 4](@ref "Exp 4 — Full case")      | 5  | 0 | 2 | 1 | 3 | All effects combined |
 
