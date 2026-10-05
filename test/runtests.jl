@@ -92,7 +92,7 @@ end
 
 @testset "Transient — BC satisfied at all times" begin
     # Robin BC: β'·θ_ξ(1,t) + θ(1,t) ≈ 1
-    # exp4 has Pe=5 (upward flow) with steep gradients at ξ=1; use 3-point
+    # exp4 has Pe=5 (downward flow) with steep gradients at ξ=1; use 3-point
     # backward difference to reduce finite-difference truncation error.
     par = benchmark(:exp4)
     ts  = [10.0, 500.0, 5000.0]
@@ -105,6 +105,115 @@ end
         slope = (3sol.theta[n,j] - 4sol.theta[n-1,j] + sol.theta[n-2,j]) / (2h)
         bc    = β * slope + sol.theta[n, j]
         @test bc ≈ 1.0  atol=5e-2
+    end
+end
+
+# ---- comparison with a finite-difference solution ----------------------------
+#
+# Independent reference: θ_τ = θ_ξξ + Pe·ξ·θ_ξ + Ω (Pe > 0 for downward flow),
+# θ_ξ(0) = γ, β'·θ_ξ(1) + θ(1) = 1, second-order finite differences on a uniform
+# grid with ghost points for both boundary conditions, backward Euler in time.
+
+"Solve a tridiagonal system (sub-, main and super-diagonal a, b, c) by the Thomas algorithm."
+function thomas(a, b, c, d)
+    n = length(b); cp = zeros(n); dp = zeros(n); x = zeros(n)
+    cp[1] = c[1] / b[1]; dp[1] = d[1] / b[1]
+    for i in 2:n
+        m = b[i] - a[i] * cp[i-1]
+        cp[i] = i < n ? c[i] / m : 0.0
+        dp[i] = (d[i] - a[i] * dp[i-1]) / m
+    end
+    x[n] = dp[n]
+    for i in n-1:-1:1
+        x[i] = dp[i] - cp[i] * x[i+1]
+    end
+    return x
+end
+
+"""
+Finite-difference operator A·θ + r for the interior and boundary nodes
+ξ_i = i/N, i = 0…N (Dirichlet top for β' = 0: θ_N = 1 is kept fixed).
+Returns the tridiagonal coefficients (a, b, c) and the source r.
+"""
+function fd_operator(par, N)
+    h = 1.0 / N; Pe = par.Pe; Ω = par.Br + par.Lambda; γ = par.gamma; β = par.beta_prime
+    a = zeros(N+1); b = zeros(N+1); c = zeros(N+1); r = fill(Ω, N+1)
+    for i in 0:N
+        ξ = i * h
+        lo = 1/h^2 - Pe*ξ/(2h); hi = 1/h^2 + Pe*ξ/(2h); j = i + 1
+        a[j] = lo; b[j] = -2/h^2; c[j] = hi
+        if i == 0                       # ghost θ_{-1} = θ_1 - 2hγ
+            c[j] += lo; r[j] -= lo * 2h * γ; a[j] = 0.0
+        elseif i == N && β > 0          # ghost θ_{N+1} = θ_{N-1} + 2h(1 - θ_N)/β
+            a[j] += hi; b[j] -= hi * 2h / β; r[j] += hi * 2h / β; c[j] = 0.0
+        end
+    end
+    return a, b, c, r
+end
+
+function fd_stationary(par, N)
+    a, b, c, r = fd_operator(par, N)
+    if par.beta_prime == 0              # Dirichlet: θ_N = 1
+        a[end] = 0.0; b[end] = 1.0; r[end] = -1.0
+    end
+    return thomas(a, b, c, -r)
+end
+
+function fd_transient(par, N, θ0, τs; dτ = 1e-5)
+    a, b, c, r = fd_operator(par, N)
+    θ = copy(θ0); dir = par.beta_prime == 0
+    dir && (θ[end] = 1.0)
+    out = zeros(N+1, length(τs)); τ = 0.0
+    for (n, τn) in enumerate(τs)
+        while τ < τn - 1e-12
+            d = θ .+ dτ .* r
+            aa = -dτ .* a; bb = 1 .- dτ .* b; cc = -dτ .* c
+            if dir
+                aa[end] = 0.0; bb[end] = 1.0; d[end] = 1.0
+            end
+            θ = thomas(aa, bb, cc, d); τ += dτ
+        end
+        out[:, n] = θ
+    end
+    return out
+end
+
+@testset "Stationary — finite-difference reference" begin
+    N = 800
+    for (Pe, β, Br, Λ) in [(5.0, 0.0, 0.0, 0.0), (20.0, 0.0, 0.0, 0.0), (-5.0, 0.0, 0.0, 0.0),
+                           (5.0, 1.0, 0.0, 3.0), (7.0, 0.0, 6.0, 0.0)]
+        par = IceColumnPar(L, T_air, kappa, k, β, 2.0, Pe; Br = Br, Lambda = Λ)
+        sol = solve_stationary(par; nz = N + 1)
+        @test maximum(abs.(sol.theta_eq .- fd_stationary(par, N))) < 1e-4
+    end
+    # With geothermal heating (γ < 0), downward flow (Pe > 0) brings the base
+    # closer to the surface temperature than pure diffusion, upward flow less close
+    θb(Pe) = solve_stationary(IceColumnPar(L, T_air, kappa, k, 0.0, -0.5, Pe); nz = 3).theta_eq[1]
+    @test θb(5.0) < θb(0.0) < θb(-5.0)
+end
+
+@testset "Transient — finite-difference reference" begin
+    N  = 400
+    τs = [0.02, 0.1, 0.5]
+    kappa_yr = kappa * 365.25 * 24 * 3600
+    ts = τs .* L^2 ./ kappa_yr
+    for (Pe, β) in [(5.0, 0.0), (20.0, 0.0), (-5.0, 0.0), (5.0, 1.0)]
+        par = IceColumnPar(L, T_air, kappa, k, β, 2.0, Pe)
+        sol = solve(par, ts; init = uniform(0.9 * T_air), n_modes = 15, nz = N + 1)
+        ref = fd_transient(par, N, fill(0.9, N + 1), τs)
+        @test maximum(abs.(sol.theta .- ref)) < 2e-3
+    end
+end
+
+@testset "Transient — decay toward the stationary profile" begin
+    # The slowest mode must decay on the advective time scale ~1/Pe (in τ),
+    # not on a spuriously long one (as with a sign mismatch between the
+    # stationary and transient operators).
+    for Pe in [5.0, 20.0, 60.0]
+        par = IceColumnPar(L, T_air, kappa, k, 0.0, 2.0, Pe)
+        _, λ = eigenvalues(par, 3)
+        @test all(λ .< 0)
+        @test -λ[1] > 0.5 * Pe
     end
 end
 
